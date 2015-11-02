@@ -1,15 +1,11 @@
 package spark
 
-import hadoop.custom.{PatternRecordReader, PatternInputFormat}
-import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.io.{Text, LongWritable}
-import org.apache.hadoop.mapred.{Reporter => MReporter, InputSplit => MInputSplit, TextInputFormat => MTextInputFormat, JobConf => MJobConf, RecordReader => MRecordReader}
-import org.apache.hadoop.mapreduce.lib.input.{TextInputFormat, FileInputFormat}
-import org.apache.hadoop.mapreduce.{TaskAttemptContext, RecordReader, InputSplit}
-import org.apache.spark.SparkContext
-import org.apache.spark.SparkContext._
-import org.apache.spark.SparkConf
-import org.apache.spark.rdd.RDD
+import hadoop.custom.PatternRecordReader
+import org.apache.hadoop.io.{LongWritable, Text}
+import org.apache.hadoop.mapred.{InputSplit => MInputSplit, JobConf => MJobConf, RecordReader => MRecordReader, Reporter => MReporter, TextInputFormat => MTextInputFormat}
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat
+import org.apache.hadoop.mapreduce.{InputSplit, RecordReader, TaskAttemptContext}
+import org.apache.spark.{SparkConf, SparkContext}
 
 /**
  * Created by oliver on 10/31/15.
@@ -17,8 +13,8 @@ import org.apache.spark.rdd.RDD
 object SimpleApp {
 
   def main(args: Array[String]) {
-//    val dataPath = "/home/oliver/IdeaProjects/learning-spark/src/test/resources/msweb/anonymous-msweb.data" // Should be some file on your system
-    val dataPath = "/home/oliver/IdeaProjects/learning-spark/src/test/resources/msweb/test.data" // Should be some file on your system
+    val rootPath = "src/test/resources/msweb"
+    val dataPath = s"$rootPath/test.data" // Should be some file on your system
     val conf = new SparkConf().setAppName("Simple Application")
 
     val sc = new SparkContext(conf)
@@ -26,11 +22,18 @@ object SimpleApp {
     val rawData =
         sc.newAPIHadoopFile [LongWritable, Text, CustomInputFormat2](dataPath)
 
-//    rawData.foreach(l => println(s"[[$l]]"))
-val data = rawData.map(x => s"---- ${x._1.toString} :: ${x._2.toString}").collect().foreach(println)
-//    val data = rawData.foreach(l => println(s"[[$l]]"))
+    //    rawData.foreach(l => println(s"[[$l]]"))
+    val data = rawData.map(x => s"---- ${x._1.toString} :: ${x._2.toString}").collect().foreach(println)
+    //    val data = rawData.foreach(l => println(s"[[$l]]"))
     println(data)
 
+//    val outPath = s"$rootPath/temp.data"
+//
+//    val outFile = new java.io.File(outPath)
+//    if(outFile.exists())
+//      outFile.delete()
+//
+//    rawData.map(x => x._2.toString).saveAsTextFile(outPath)
 
   }
 

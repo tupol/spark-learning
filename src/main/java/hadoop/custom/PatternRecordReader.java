@@ -28,6 +28,9 @@ public class PatternRecordReader
 
     private LineReader in;
     private final static Text EOL = new Text("\n");
+    private final static Text OPEN_MARKER = new Text(", {");
+    private final static Text CLOSE_MARKER = new Text("}");
+    private final static Text SEPARATOR = new Text(",");
     private Pattern delimiterPattern;
     private String delimiterRegex;
     private int maxLengthRecord;
@@ -43,8 +46,6 @@ public class PatternRecordReader
     public void initialize(InputSplit genericSplit,
                            TaskAttemptContext context)
             throws IOException, InterruptedException {
-
-        System.out.println("# initialize");
 
         Configuration job = context.getConfiguration();
         this.delimiterRegex = job.get("record.delimiter.regex");
@@ -193,7 +194,6 @@ public class PatternRecordReader
             throws IOException {
 
         int offset = 0;
-        boolean multiLine = false;
 
         text.clear();
         // If there was a value carried then we initialize the current value with the carried one
@@ -222,18 +222,23 @@ public class PatternRecordReader
                 carryValue.clear();
                 carryValue.append(EOL.getBytes(), 0, EOL.getLength());
                 carryValue.append(tmp.getBytes(), 0, tmp.getLength());
-                if(multiLine) {
-                } else {
-//                    // If the next line is also a match
-                    text.append(EOL.getBytes(), 0, EOL.getLength());
-                    text.append(tmp.getBytes(), 0, tmp.getLength());
+                if(i != 0) {
+                    text.append(CLOSE_MARKER.getBytes(), 0, CLOSE_MARKER.getLength());
+
                 }
+                else
+                    text.append(tmp.getBytes(), 0, tmp.getLength());
+
                 break;
             } else {
+                if(i == 0)
+                    text.append(OPEN_MARKER.getBytes(), 0, OPEN_MARKER.getLength());
+                else
+                    text.append(SEPARATOR.getBytes(), 0, SEPARATOR.getLength());
+
                 // Append value to record
-                text.append(EOL.getBytes(), 0, EOL.getLength());
+//                text.append(SEPARATOR.getBytes(), 0, SEPARATOR.getLength());
                 text.append(tmp.getBytes(), 0, tmp.getLength());
-                multiLine = true;
             }
 
         }
