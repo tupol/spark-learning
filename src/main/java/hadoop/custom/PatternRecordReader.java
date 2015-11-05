@@ -27,10 +27,9 @@ public class PatternRecordReader
             PatternRecordReader.class);
 
     private LineReader in;
-    private final static Text EOL = new Text("\n");
-    private final static Text OPEN_MARKER = new Text(", {");
+    private final static Text OPEN_MARKER = new Text(",{");
     private final static Text CLOSE_MARKER = new Text("}");
-    private final static Text SEPARATOR = new Text(",");
+    private final static Text SEPARATOR = new Text(";");
     private Pattern delimiterPattern;
     private String delimiterRegex;
     private int maxLengthRecord;
@@ -142,18 +141,10 @@ public class PatternRecordReader
 
 
         if (newSize == 0) {
-            if(carryValue.getLength() == 0) {
-                // We've reached end of Split
-                key = null;
-                value = null;
-                return false;
-            } else {
-                key.set(pos + carryValue.getLength());
-                value.clear();
-                value.append(carryValue.getBytes(), 0, carryValue.getLength());
-                carryValue.clear();
-                return true;
-            }
+            // We've reached end of Split
+            key = null;
+            value = null;
+            return false;
         } else {
             // Tell Hadoop a new line has been found
             // key / value will be retrieved by
@@ -196,10 +187,6 @@ public class PatternRecordReader
         int offset = 0;
 
         text.clear();
-        // If there was a value carried then we initialize the current value with the carried one
-        if(carryValue.getLength() > 0) {
-            text.append(carryValue.getBytes(), 0, carryValue.getLength());
-        }
 
         Text tmp = new Text();
 
@@ -218,26 +205,26 @@ public class PatternRecordReader
             }
 
             if (m.matches()) {
-                // If there were non-matching lines, we after the match, then we carry the next match and break
-                carryValue.clear();
-                carryValue.append(EOL.getBytes(), 0, EOL.getLength());
-                carryValue.append(tmp.getBytes(), 0, tmp.getLength());
-                if(i != 0) {
+                if (i != 0) {
                     text.append(CLOSE_MARKER.getBytes(), 0, CLOSE_MARKER.getLength());
-
-                }
-                else
+                } else {
                     text.append(tmp.getBytes(), 0, tmp.getLength());
-
+                }
+                // We need to carry the match, in case we have no =n matching lines next
+                carryValue.clear();
+                carryValue.append(tmp.getBytes(), 0, tmp.getLength());
                 break;
             } else {
-                if(i == 0)
+                if (i == 0) {
+                    // If there was a value carried then we initialize the current value with the carried one
+                    if (carryValue.getLength() > 0) {
+                        text.append(carryValue.getBytes(), 0, carryValue.getLength());
+                    }
                     text.append(OPEN_MARKER.getBytes(), 0, OPEN_MARKER.getLength());
-                else
+                } else {
                     text.append(SEPARATOR.getBytes(), 0, SEPARATOR.getLength());
-
+                }
                 // Append value to record
-//                text.append(SEPARATOR.getBytes(), 0, SEPARATOR.getLength());
                 text.append(tmp.getBytes(), 0, tmp.getLength());
             }
 
