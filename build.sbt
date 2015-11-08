@@ -9,12 +9,14 @@ mainClass in Compile := Some("sparcass.SimpleApp")
 
 libraryDependencies += "org.apache.spark" %% "spark-core" % "1.5.1"
 
-libraryDependencies += "com.datastax.spark" %% "spark-cassandra-connector" % "1.5.0-M2"
+libraryDependencies += "org.apache.spark" %% "spark-sql" % "1.5.1"
+
+libraryDependencies += "com.datastax.spark" %% "spark-cassandra-connector" % "1.5.0-M2" withSources() withJavadoc()
 
 
 run in Compile <<= Defaults.runTask(fullClasspath in Compile, mainClass in (Compile, run), runner in (Compile, run))
 
-assemblyJarName in assembly := "sparcass.jar"
+assemblyJarName in assembly := s"${name.value}-fat.jar"
 
 assemblyMergeStrategy in assembly := {
    {
