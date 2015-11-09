@@ -12,11 +12,12 @@ object GitHubLogsQuery {
 
   def main(args: Array[String]) {
 
-    import GitHubsProps._
+    // Load basic properties from the arguments
+    val props: GitHubLogsProps = GitHubLogsArgsProps(args)
 
     // Configures Spark.
     val conf = new SparkConf(true)
-      .set("spark.cassandra.connection.host", cassandraHost)
+      .set("spark.cassandra.connection.host", props.cassandraHost)
 
     // Connect to the Spark cluster
     val sc = new SparkContext(conf)
@@ -27,7 +28,14 @@ object GitHubLogsQuery {
     println("Show me some stuff!")
 
     // Create an RDD corresponding to the Cassandra keyspace / table, selecting the the ev_table column
-    val types = sc.cassandraTable(cassandraKeyspace, cassandraTable).select("ev_type")
+    // The `[String]' type in `cassandraTable[String]` will produce string results as opposed to CassandraRow results
+    val types = sc.cassandraTable[String](props.cassandraKeyspace, props.cassandraTable).select("ev_type")
+
+    // The `as(.....)` has a similar result as the above typed cassandraTable call
+    //val types = sc.cassandraTable(props.cassandraKeyspace, props.cassandraTable).select("ev_type").as((t: String) => t)
+
+    // The following will produce a list of CassandraRow objects (no typing, no .as(...) call)
+    //val types = sc.cassandraTable(props.cassandraKeyspace, props.cassandraTable).select("ev_type")
 
     // Count the occurrences for each event type
     val groupedTypes = types.map((_, 1)).reduceByKey(_ + _)
@@ -35,8 +43,8 @@ object GitHubLogsQuery {
     groupedTypes.foreach(println)
 
     // Count all using the SQL Context
-    val count1 = cqlContext.sql("SELECT count(*) FROM test.glogs")
-    println(s"In the end we have ${count1.first} records.")
+    val count = cqlContext.sql("SELECT count(*) FROM test.glogs")
+    println(s"In the end we have ${count.first} records.")
 
     // Remove the table and the keyspace
     //    println("Cleaning up.")
@@ -48,6 +56,5 @@ object GitHubLogsQuery {
     println("Ok, we're done.")
 
   }
-
 
 }

@@ -13,11 +13,12 @@ object GitHubLogsImporter {
 
   def main(args: Array[String]) {
 
-    import GitHubsProps._
+    // Load basic properties from the arguments
+    val props: GitHubLogsProps = GitHubLogsArgsProps(args)
 
     // Configures Spark.
     val conf = new SparkConf(true)
-      .set("spark.cassandra.connection.host", cassandraHost)
+      .set("spark.cassandra.connection.host", props.cassandraHost)
 
     // Connect to the Spark cluster
     val sc = new SparkContext(conf)
@@ -28,22 +29,21 @@ object GitHubLogsImporter {
     // Create the keyspace and table using the manual connector.
     // Normally this would already exist in the Cassandra cluster prior to the table creation, but for our purposes we create it here
     CassandraConnector(conf).withSessionDo { session =>
-      session.execute(s"CREATE KEYSPACE IF NOT EXISTS $cassandraKeyspace WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': 2 };")
-      // Yet another option for creating our table, using hte manual connector
-      // session.execute(s"CREATE TABLE IF NOT EXISTS $cassandraKeyspace.$cassandraTable (id bigint PRIMARY KEY, type text);")
+      session.execute(s"CREATE KEYSPACE IF NOT EXISTS ${props.cassandraKeyspace} WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': 2 };")
+      // Yet another option for creating our table, using the manual connector
+      // session.execute(s"CREATE TABLE IF NOT EXISTS ${props.cassandraKeyspace}.${props.cassandraTable} (id bigint PRIMARY KEY, type text);")
     }
 
     println("Reading json file(s) into Spark...")
     // Get the data from the input json file
-    val importedDF = cqlContext.read.json(inputFile)
+    val importedDF = cqlContext.read.json(props.inputFile)
 
     println("Save data into Cassandra...")
-    importEventsWithPKandCC(importedDF.rdd, cassandraKeyspace, cassandraTable)
+    importEventsWithPKandCC(importedDF.rdd, props.cassandraKeyspace, props.cassandraTable)
 
     // TODO Add some progress report, catch exceptions....
 
     println("Ok, we're done.")
-
 
   }
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-sbt assembly
+# For development testing reasons, we need to reassembly when we change the code
+# sbt assembly
 
 spark-submit \
   --class "sparcass.GitHubLogsQuery" \
@@ -10,4 +11,7 @@ spark-submit \
   -Dspark.app.cassandra.host=localhost
   -Dspark.app.cassandra.keyspace=test
   -Dspark.app.cassandra.table=glogs" \
-  target/scala-2.10/learning-spark-fat.jar
+  target/scala-2.10/learning-spark-fat.jar \
+  spark.app.cassandra.host=localhost \
+  spark.app.cassandra.keyspace=test \
+  spark.app.cassandra.table=glogs

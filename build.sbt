@@ -18,6 +18,7 @@ run in Compile <<= Defaults.runTask(fullClasspath in Compile, mainClass in (Comp
 
 assemblyJarName in assembly := s"${name.value}-fat.jar"
 
+// Add exclusions, provided...
 assemblyMergeStrategy in assembly := {
    {
     case PathList("META-INF", xs @ _*) => MergeStrategy.discard
