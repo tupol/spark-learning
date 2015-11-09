@@ -71,3 +71,5 @@ project/plugins/project/
 .scala_dependencies
 .worksheet
 
+run-sparcass-import-*.sh
+

@@ -6,19 +6,17 @@ import org.apache.spark.sql.cassandra.CassandraSQLContext
 import org.apache.spark.{SparkConf, SparkContext}
 
 
-object SimpleApp {
+/**
+ * Tool for importing GitHub log files into Cassandra
+ */
+object GitHubLogsImporter {
 
   def main(args: Array[String]) {
 
-    //TODO Add some parameters for casandraHost and inputFile
-
-    val appName = "SparCass"
-    val cassandraHost = "localhost"
-    val inputFile = "/Users/olivertupran/IdeaProjects/spark-learning/src/test/resources/glogs/2015-01-01-0.json"
+    import GitHubsProps._
 
     // Configures Spark.
     val conf = new SparkConf(true)
-      .setAppName(appName)
       .set("spark.cassandra.connection.host", cassandraHost)
 
     // Connect to the Spark cluster
@@ -27,57 +25,25 @@ object SimpleApp {
     //Create a Cassandra SQL context
     val cqlContext = new CassandraSQLContext(sc)
 
-
     // Create the keyspace and table using the manual connector.
+    // Normally this would already exist in the Cassandra cluster prior to the table creation, but for our purposes we create it here
     CassandraConnector(conf).withSessionDo { session =>
-      session.execute("CREATE KEYSPACE IF NOT EXISTS test WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': 2 };")
-      // session.execute("CREATE TABLE IF NOT EXISTS test.glogs (id bigint PRIMARY KEY, type text);")
+      session.execute(s"CREATE KEYSPACE IF NOT EXISTS $cassandraKeyspace WITH REPLICATION = {'class': 'SimpleStrategy', 'replication_factor': 2 };")
+      // Yet another option for creating our table, using hte manual connector
+      // session.execute(s"CREATE TABLE IF NOT EXISTS $cassandraKeyspace.$cassandraTable (id bigint PRIMARY KEY, type text);")
     }
 
-
+    println("Reading json file(s) into Spark...")
     // Get the data from the input json file
     val importedDF = cqlContext.read.json(inputFile)
 
-    //    importEventsDefault(importedDF.rdd, "test", "glogs")
-    importEventsWithPKandCC(importedDF.rdd, "test", "glogs")
+    println("Save data into Cassandra...")
+    importEventsWithPKandCC(importedDF.rdd, cassandraKeyspace, cassandraTable)
 
-
-    // Count all using the SQL Context
-    val count0 = cqlContext.sql("SELECT count(*) FROM test.glogs")
-    println(s"Initially we have ${count0.first} records.")
-
-    println("Show me the stuff!")
-
-
-    // Create an RDD corresponding to the Cassandra keyspace / table
-    val rdd = sc.cassandraTable("test", "glogs")
-
-    // Count the RDDs
-    println(s"We have ${rdd.count} rows.")
-
-    // Print the row values
-    rdd.collect.foreach(row => println(row.columnValues))
-
-    // Select only the types
-    val types = cqlContext.cassandraSql("SELECT ev_type from test.glogs")
-    val groupedTypes = types.map((_, 1)).reduceByKey(_ + _)
-    // Print grouped types
-    groupedTypes.foreach(println)
-
-    // Count all using the SQL Context
-    val count1 = cqlContext.sql("SELECT count(*) FROM test.glogs")
-    println(s"In the end we have ${count1.first} records.")
-
-
-    println("Cleaning up.")
-
-    // Remove the table and the keyspace
-    CassandraConnector(conf).withSessionDo { session =>
-      session.execute("DROP TABLE test.glogs")
-      session.execute("DROP KEYSPACE test")
-    }
+    // TODO Add some progress report, catch exceptions....
 
     println("Ok, we're done.")
+
 
   }
 
@@ -85,6 +51,7 @@ object SimpleApp {
    * Import the events RDD (of rows) into the Cassandra database,
    * with minimal setup (by default partition key will be the `type` and
    * no clustering columns defined).
+   * This creates a bit of a problem, since the type is not a good primary key
    *
    * @param rdd
    * @param keyspaceName
