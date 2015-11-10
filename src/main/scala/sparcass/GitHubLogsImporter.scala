@@ -2,8 +2,10 @@ package sparcass
 
 import com.datastax.spark.connector._
 import com.datastax.spark.connector.cql._
+import com.datastax.spark.connector.types.TimestampParser
 import org.apache.spark.sql.cassandra.CassandraSQLContext
 import org.apache.spark.{SparkConf, SparkContext}
+import java.util.Date
 
 
 /**
@@ -84,19 +86,21 @@ object GitHubLogsImporter {
     import com.datastax.spark.connector.cql.{ClusteringColumn, ColumnDef, PartitionKeyColumn, RegularColumn, TableDef}
     import com.datastax.spark.connector.types._
 
+    //TODO Think about what is the best partition key/primary key combination
     // Define columns
     val p1Col = new ColumnDef("ev_type", PartitionKeyColumn, VarCharType)
     val c1Col = new ColumnDef("actor", ClusteringColumn(0), VarCharType)
     val c2Col = new ColumnDef("id", ClusteringColumn(1), BigIntType)
-    val rCol = new ColumnDef("fullRecord", RegularColumn, VarCharType)
+    // TODO Should "created_at" be the partition key? More to study...
+    val r1Col = new ColumnDef("created_at", RegularColumn, TimestampType)
+    val r2Col = new ColumnDef("fullRecord", RegularColumn, VarCharType)
 
     // Create table definition
-    val table = TableDef(keyspaceName, tableName, Seq(p1Col), Seq(c1Col, c2Col), Seq(rCol))
+    val table = TableDef(keyspaceName, tableName, Seq(p1Col), Seq(c1Col, c2Col), Seq(r1Col, r2Col))
 
     // Map rdd into custom data structure and create table
     val events = rdd.map(converter)
-    //TODO Figure out replication configuration
-    events.saveAsCassandraTableEx(table, SomeColumns("ev_type", "actor", "id", "fullRecord"))
+    events.saveAsCassandraTableEx(table, SomeColumns("ev_type", "actor", "id", "created_at", "fullRecord"))
 
   }
 
@@ -107,7 +111,7 @@ object GitHubLogsImporter {
    * @param id
    * @param fullRecord
    */
-  case class EventByTypeActorNameId(ev_type: String, actor: String, id: Long, fullRecord: String)
+  case class EventByTypeActorNameId(ev_type: String, actor: String, id: Long, created_at: Date, fullRecord: String)
 
   /**
    * Implicit conversion between an SQL row and EventByTypeActorNameId
@@ -115,7 +119,7 @@ object GitHubLogsImporter {
    * @return
    */
   implicit def sqlRowToEventByTypeActorNameId(row: org.apache.spark.sql.Row): EventByTypeActorNameId = {
-    EventByTypeActorNameId(row(7).toString, row(0).toString.split(",")(3), row(2).toString.toLong, row.toString)
+    EventByTypeActorNameId(row(7).toString, row(0).toString.split(",")(3), row(2).toString.toLong, TimestampParser.parse(row(1).toString), row.toString)
   }
 
 }
