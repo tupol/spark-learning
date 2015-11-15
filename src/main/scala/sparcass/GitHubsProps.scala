@@ -26,8 +26,8 @@ case class GitHubLogsArgsProps(args: Array[String]) extends GitHubLogsProps {
   val argsMap = args.map(_.split("=")).map(x => (x(0), x(1))).toMap
 
   val cassandraHost = argsMap.getOrElse("spark.app.cassandra.host", "localhost")
-  val cassandraKeyspace = argsMap.getOrElse("spark.app.cassandra.keyspace", "test")
-  val cassandraTable = argsMap.getOrElse("spark.app.cassandra.table", "glogs")
+  val cassandraKeyspace = argsMap.getOrElse("spark.app.cassandra.keyspace", "glogs")
+  val cassandraTable = argsMap.getOrElse("spark.app.cassandra.table.root", "logs")
   val inputFile = argsMap.getOrElse("spark.app.input.file", "NoFile")
 
 }

@@ -7,11 +7,12 @@ spark-submit \
   --class "sparcass.GitHubLogsQuery" \
   --name "SparCass-Query" \
   --master local \
-  --conf "spark.driver.extraJavaOptions=
-  -Dspark.app.cassandra.host=localhost
-  -Dspark.app.cassandra.keyspace=test
-  -Dspark.app.cassandra.table=glogs" \
   target/scala-2.10/learning-spark-fat.jar \
-  spark.app.cassandra.host=localhost \
-  spark.app.cassandra.keyspace=test \
-  spark.app.cassandra.table=glogs
+  spark.app.cassandra.host=127.0.0.1 \
+  spark.app.cassandra.keyspace=glogs \
+  spark.app.cassandra.table.root=logs
+
+#  --conf "spark.driver.extraJavaOptions=
+#  -Dspark.app.cassandra.host=localhost
+#  -Dspark.app.cassandra.keyspace=glogs
+#  -Dspark.app.cassandra.table.root=logs" \
