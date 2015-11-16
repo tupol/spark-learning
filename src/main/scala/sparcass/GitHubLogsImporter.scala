@@ -46,27 +46,28 @@ object GitHubLogsImporter {
     // Get the data from the input json file and cache it, as we will be doing multiple saves
     val importedRDD = cqlContext.read.json(props.inputFile).rdd.cache
 
-    val defaultTableExists = sc.cassandraTable("system", "schema_columns").
-      where("keyspace_name=? and columnfamily_name=?",
-        props.cassandraKeyspace, props.cassandraTable).
-      count > 0
+    val defaultTableExists = checkTableExists(sc, props.cassandraKeyspace, props.cassandraTable)
 
     logger.info("[Create table and] Import data into the default table (primary key = id).")
     if(defaultTableExists)
+      // We already have the table so just import the data
       importLogsDefault(importedRDD, props.cassandraKeyspace, props.cassandraTable)
     else
+      // We need to create the table first; let's do it the default way (first column will become the primary key)
       createAndImportLogsDefault(importedRDD, props.cassandraKeyspace, props.cassandraTable)
 
     logger.info("[Create table and] Import data into the better structure table.")
+    // Why "better table"? If it is better indeed depends on the use case, but I think for an hourly based time series
+    // this should do just fine
     val betterTableName = props.cassandraTable + "_hourly_by_ts_id"
-    val betterTableExists = sc.cassandraTable("system", "schema_columns").
-      where("keyspace_name=? and columnfamily_name=?",
-        props.cassandraKeyspace, betterTableName).
-      count > 0
+
+    val betterTableExists = checkTableExists(sc, props.cassandraKeyspace, betterTableName)
 
     if(betterTableExists)
+      // We already have the table so just import the data
       importHourlyLogsBy_CreatedAt_Id(importedRDD, props.cassandraKeyspace, betterTableName)
     else
+      // We need to create the table first; let's do it through the API for the fun of it
       createAndImportHourlyLogsBy_CreatedAt_Id(importedRDD, props.cassandraKeyspace, betterTableName)
 
     // TODO Add some progress report, catch exceptions....
@@ -74,6 +75,12 @@ object GitHubLogsImporter {
     logger.info("Ok, we're done.")
 
   }
+
+
+  def checkTableExists(sc: SparkContext, keyspace: String, tablename: String) : Boolean =
+    sc.cassandraTable("system", "schema_columns").
+      where("keyspace_name=? and columnfamily_name=?", keyspace, tablename).
+      count > 0
 
   def importLogsDefault(rdd: RDD[Row], keyspaceName: String, tableName: String)(implicit converter: (Row) => LogRecordForImport): Unit = {
 
@@ -176,6 +183,11 @@ object GitHubLogsImporter {
 
   /**
    * Define structure for the GitHub logs rdd data as it will be exported to Cassandra.
+   *
+   * It does not map the entire Json structure, just the parts considered relevant.
+   *
+   * To solve the time problem once and for all, the date and time will be UTC.
+   *
    * @param ev_id
    * @param created_at
    * @param ev_type

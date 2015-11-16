@@ -69,9 +69,10 @@ object GitHubLogsQuery {
     val count = cqlContext.sql(s"SELECT count(*) FROM ${props.cassandraKeyspace}.${props.cassandraTable}")
     println(s"In the end we have ${count.first} records.")
 
+    val betterTableName = props.cassandraTable + "_hourly_by_ts_id"
 
     def getMaxCountPerDateAndHour(fieldName: String, date_utc: String, hour_utc: Int): Option[(String, Int)] =
-      sc.cassandraTable[CassandraRow](props.cassandraKeyspace, props.cassandraTable + "_hourly_by_ts_id").
+      sc.cassandraTable[CassandraRow](props.cassandraKeyspace, betterTableName).
         select(fieldName).
         where("date_utc=? and hour_utc=?", date_utc, hour_utc).
         map(x => (x.getString(0), 1)).
@@ -79,10 +80,9 @@ object GitHubLogsQuery {
         sortBy(_._2, false).take(1).headOption
 
 
-    def getMaxCountPerDateAndHours(fieldName: String, date_utc: String) = {
+    def getMaxCountPerDateAndHours(fieldName: String, date_utc: String): IndexedSeq[(Int, Option[(String, Int)])] = {
       val hours = (0 to 23)
-      val hourlyActivity = hours.map(h => (h, getMaxCountPerDateAndHour(fieldName, date_utc, h)))
-      hourlyActivity.map(t => (t._1, t._2.take(1).headOption))
+      hours.map(h => (h, getMaxCountPerDateAndHour(fieldName, date_utc, h)))
     }
 
 
@@ -110,7 +110,7 @@ object GitHubLogsQuery {
 
 
     def getFieldsPerDateAndHour(fieldName: String, date_utc: String, hour_utc: Int): RDD[CassandraRow] =
-      sc.cassandraTable("glogs", "logs_hourly_by_ts_id").
+      sc.cassandraTable(props.cassandraKeyspace, betterTableName).
         select(fieldName).
         where("date_utc=? and hour_utc=?", date_utc, hour_utc)
 
