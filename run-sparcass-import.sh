@@ -11,9 +11,9 @@
 spark-submit \
   --class "sparcass.GitHubLogsImporter" \
   --name "SparCass-Importer" \
-  --master local \
+  --master spark://192.168.100.10:7077 \
   target/scala-2.10/learning-spark-fat.jar \
-  spark.app.cassandra.host=localhost \
+  spark.app.cassandra.host=192.168.100.10 \
   spark.app.cassandra.keyspace=glogs \
   spark.app.cassandra.table.root=logs \
   spark.app.input.file=$1

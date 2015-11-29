@@ -14,6 +14,7 @@ import org.apache.spark.{SparkConf, SparkContext}
 
 /**
  * Tool for importing GitHub log files into Cassandra
+ * Tool for importing GitHub log files into Cassandra
  */
 object GitHubLogsImporter {
 

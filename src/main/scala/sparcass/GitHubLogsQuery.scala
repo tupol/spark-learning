@@ -58,7 +58,8 @@ object GitHubLogsQuery {
       // This version runs about 30-40% slower than the previous version
           def countByType(evType: String): Long =
             cqlContext.cassandraSql(s"SELECT COUNT(*) FROM ${props.cassandraKeyspace}.${props.cassandraTable} WHERE ev_type='$evType'").first.getLong(0)
-          val distinctTypes = cqlContext.cassandraSql(s"SELECT DISTINCT(ev_type) FROM ${props.cassandraKeyspace}.${props.cassandraTable}")
+
+      val distinctTypes = cqlContext.cassandraSql(s"SELECT DISTINCT(ev_type) FROM ${props.cassandraKeyspace}.${props.cassandraTable}")
           println("Event types count using separate Cassandra counts:")
           distinctTypes.map(_.getString(0)).collect.map(t => (t, countByType(t))).foreach(println)
     }

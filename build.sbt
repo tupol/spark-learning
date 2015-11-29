@@ -13,6 +13,8 @@ libraryDependencies += "org.apache.spark" %% "spark-sql" % "1.5.1"
 
 libraryDependencies += "com.datastax.spark" %% "spark-cassandra-connector" % "1.5.0-M2" withSources() withJavadoc()
 
+libraryDependencies += "org.apache.spark" %% "spark-mllib" % "1.5.1"
+
 
 run in Compile <<= Defaults.runTask(fullClasspath in Compile, mainClass in (Compile, run), runner in (Compile, run))
 
